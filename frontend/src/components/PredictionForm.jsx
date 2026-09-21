@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { requestPrediction } from "../services/predictionService";
 
 const fields = [
   { key: "LIMIT_BAL", label: "Credit limit", group: "Customer profile", min: 0 },
@@ -20,6 +21,7 @@ const initialValues = Object.fromEntries(fields.map(({ key }) => [key, ""]));
 
 export default function PredictionForm({ onPrediction }) {
   const [values, setValues] = useState(initialValues);
+  const [customerCode, setCustomerCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -40,8 +42,10 @@ export default function PredictionForm({ onPrediction }) {
       const numericValues = Object.fromEntries(
         Object.entries(values).map(([key, value]) => [key, Number(value)]),
       );
-      const { requestPrediction } = await import("../services/predictionService");
-      onPrediction(await requestPrediction(numericValues));
+      onPrediction(await requestPrediction({
+        ...numericValues,
+        customer_code: customerCode.trim() || null,
+      }));
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -52,6 +56,19 @@ export default function PredictionForm({ onPrediction }) {
   return (
     <form className="assessment-card" onSubmit={submit}>
       {error && <p className="form-error">{error}</p>}
+      <div className="customer-entry">
+        <label>
+          Existing customer ID (optional)
+          <input
+            name="customer_code"
+            type="text"
+            placeholder="CUST-000001"
+            value={customerCode}
+            onChange={(event) => setCustomerCode(event.target.value)}
+          />
+        </label>
+        <p>Leave blank to create a new customer on this assessment.</p>
+      </div>
       {["Customer profile", "Six-month bill statements", "Six-month payments"].map((group) => (
         <fieldset key={group}>
           <legend>{group}</legend>

@@ -1,4 +1,4 @@
-*.pkl
+
 node_modules/
 .env
 .venv/

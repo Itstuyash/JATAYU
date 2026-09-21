@@ -1,1 +1,0 @@
-async function o(r){const e=await fetch("/api/predict",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(r)}),t=await e.json();if(!e.ok)throw new Error(t.error||"Prediction request failed.");return t}export{o as requestPrediction};

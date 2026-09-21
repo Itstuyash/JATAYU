@@ -6,6 +6,7 @@ from config import Config
 from app.extensions import cors, db
 from app.routes.health import health_bp
 from app.routes.predict import predict_bp
+from app.routes.dashboard import dashboard_bp
 
 
 def create_app(config_class=Config):
@@ -18,6 +19,7 @@ def create_app(config_class=Config):
 
     app.register_blueprint(health_bp)
     app.register_blueprint(predict_bp)
+    app.register_blueprint(dashboard_bp)
 
     with app.app_context():
         db.create_all()

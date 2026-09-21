@@ -11,3 +11,17 @@ export async function requestPrediction(formValues) {
   }
   return data;
 }
+
+export async function fetchDashboard() {
+  const response = await fetch("/api/dashboard");
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Dashboard request failed.");
+  return data;
+}
+
+export async function fetchCustomerHistory(customerCode) {
+  const response = await fetch(`/api/customers/${encodeURIComponent(customerCode.trim())}`);
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Customer lookup failed.");
+  return data;
+}

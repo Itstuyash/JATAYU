@@ -11,7 +11,7 @@ from flask import Blueprint, jsonify, request
 from pydantic import ValidationError
 
 from app.extensions import db
-from app.models import PredictionRecord
+from app.models import Customer, PredictionRecord
 from app.schemas import PredictionRequest
 from ml.feature_engineering import MODEL_FEATURES
 from ml.inference import transform_for_classifier
@@ -90,7 +90,8 @@ def predict():
     except ValidationError as error:
         return jsonify({"success": False, "error": error.errors()}), 400
 
-    raw_values = payload.model_dump()
+    customer_code = payload.customer_code
+    raw_values = payload.model_dump(exclude={"customer_code"})
     raw_frame = pd.DataFrame([raw_values])
 
     try:
@@ -126,7 +127,19 @@ def predict():
     except (TypeError, ValueError) as error:
         return jsonify({"success": False, "error": str(error)}), 400
 
+    customer = None
+    if customer_code:
+        customer = Customer.query.filter_by(customer_code=customer_code.strip().upper()).first()
+        if customer is None:
+            return jsonify({"success": False, "error": "Customer ID was not found."}), 404
+    else:
+        customer = Customer(customer_code="PENDING")
+        db.session.add(customer)
+        db.session.flush()
+        customer.customer_code = f"CUST-{customer.id:06d}"
+
     record = PredictionRecord(
+        customer=customer,
         **raw_values,
         Total_bill=float(model_features["Total_bill"]),
         Total_pay=float(model_features["Total_pay"]),
@@ -134,6 +147,8 @@ def predict():
         prediction=prediction_value,
         prediction_label=prediction_label,
         default_probability=default_probability,
+        selected_model=best_model_name,
+        model_predictions=model_results,
     )
     db.session.add(record)
     db.session.commit()
@@ -162,5 +177,6 @@ def predict():
                 ]
             },
             "prediction_id": record.id,
+            "customer_code": customer.customer_code,
         }
     ), 200
