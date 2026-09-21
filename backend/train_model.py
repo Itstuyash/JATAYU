@@ -31,6 +31,21 @@ SHAP_BACKGROUNDS_PATH = BASE_DIR / "ml" / "shap_backgrounds.pkl"
 TARGET_COLUMN = "default.payment.next.month"
 
 
+def encoding_correction(data):
+    """Mirror the notebook’s preprocessing of invalid categorical values."""
+    if "EDUCATION" in data.columns:
+        data.loc[(data["EDUCATION"] == 0) | (data["EDUCATION"] == 6), "EDUCATION"] = 5
+    if "MARRIAGE" in data.columns:
+        data.loc[data["MARRIAGE"] == 0, "MARRIAGE"] = 3
+    for column in ["PAY_0", "PAY_2", "PAY_3", "PAY_4", "PAY_5", "PAY_6"]:
+        if column in data.columns:
+            data.loc[(data[column] == -1) | (data[column] == -2), column] = 0
+    for column in ["BILL_AMT1", "BILL_AMT2", "BILL_AMT3", "BILL_AMT4", "BILL_AMT5", "BILL_AMT6"]:
+        if column in data.columns:
+            data[column] = data[column].abs()
+    return data
+
+
 def load_dataset(dataset_path=DATASET_PATH):
     """Load the UCI dataset and validate its required columns."""
     data = pd.read_excel(dataset_path, header=1)
@@ -38,6 +53,7 @@ def load_dataset(dataset_path=DATASET_PATH):
     # The original UCI Excel file spells the target with spaces. Normalize it
     # once at the data boundary to the project's canonical target name.
     data = data.rename(columns={"default payment next month": TARGET_COLUMN})
+    data = encoding_correction(data)
 
     required_columns = {"ID", TARGET_COLUMN}
     missing_columns = required_columns - set(data.columns)
@@ -113,7 +129,6 @@ def main():
         print(classification_report(y_test, test_predictions))
 
         joblib.dump(pipeline, MODEL_PATHS[model_name])
-        engineered_background = pipeline.named_steps["feature_engineering"].transform(X_train)
         shap_backgrounds[model_name] = transform_for_classifier(
             pipeline, X_train.sample(n=min(100, len(X_train)), random_state=42)
         )
@@ -124,6 +139,11 @@ def main():
     joblib.dump(shap_backgrounds, SHAP_BACKGROUNDS_PATH)
     print(f"\nBest model by ROC-AUC: {best_model}")
     print(f"Saved model metrics to: {METRICS_PATH}")
+
+    # Keep a clear readability printout for the logistic-regression checkpoint.
+    if "Logistic Regression" in metrics:
+        print("\nLogistic Regression metrics from project pipeline:")
+        print(metrics["Logistic Regression"])
 
 
 if __name__ == "__main__":

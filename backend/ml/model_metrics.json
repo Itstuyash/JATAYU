@@ -3,16 +3,16 @@
   "best_model": "XGBoost",
   "models": {
     "Random Forest": {
-      "accuracy": 0.757833,
-      "roc_auc": 0.729039
+      "accuracy": 0.754667,
+      "roc_auc": 0.724253
     },
     "Logistic Regression": {
-      "accuracy": 0.644167,
-      "roc_auc": 0.704553
+      "accuracy": 0.767833,
+      "roc_auc": 0.732072
     },
     "XGBoost": {
-      "accuracy": 0.748,
-      "roc_auc": 0.751375
+      "accuracy": 0.742667,
+      "roc_auc": 0.75475
     }
   }
 }
