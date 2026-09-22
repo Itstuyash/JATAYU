@@ -16,23 +16,35 @@ from ml.feature_engineering import transform_raw_input
 
 
 predict_bp = Blueprint("predict", __name__, url_prefix="/api")
-MODEL_PATH = Path(__file__).resolve().parents[2] / "ml" / "credit_default_model.pkl"
+MODEL_PATH = Path(__file__).resolve().parents[2] / "ml" / "credit_default_full_model_bundle.pkl"
 
 
 @lru_cache(maxsize=1)
 def get_model_assets():
-    """Load the single notebook artifact containing all three pipelines."""
+    """Load the uploaded bundle containing models, thresholds, and metadata."""
     if not MODEL_PATH.exists():
         raise FileNotFoundError(f"Missing trained model file: {MODEL_PATH.name}")
     artifact = joblib.load(MODEL_PATH)
+    precision_scores = {
+        model_key: metrics["threshold_tuned_f1"]["precision"]
+        for model_key, metrics in artifact["test_metrics"].items()
+    }
+    best_model_key = max(precision_scores, key=precision_scores.get)
+    display_names = {
+        "random_forest": "Random Forest",
+        "xgboost": "XGBoost",
+        "logistic_regression": "Logistic Regression",
+    }
     return {
-        "pipelines": {
-            "Random Forest": artifact["random_forest"],
-            "XGBoost": artifact["xgboost"],
-            "Logistic Regression": artifact["logistic_regression"],
-        },
+        "pipelines": artifact["models"],
         "thresholds": artifact["thresholds"],
-        "ensemble_method": artifact["ensemble_method"],
+        "selected_model": {
+            "name": display_names[best_model_key],
+            "key": best_model_key,
+            "precision": precision_scores[best_model_key],
+        },
+        "ensemble_method": artifact["ensemble"]["method"],
+        "selection_metric": "precision",
     }
 
 
@@ -81,14 +93,19 @@ def predict():
         assets = get_model_assets()
         model_results = []
 
-        for model_name, pipeline in assets["pipelines"].items():
-            default_probability = float(pipeline.predict_proba(raw_frame)[0, 1])
-            threshold = float(assets["thresholds"][model_name.lower().replace(" ", "_")])
+        display_names = {
+            "random_forest": "Random Forest",
+            "xgboost": "XGBoost",
+            "logistic_regression": "Logistic Regression",
+        }
+        for model_key, pipeline in assets["pipelines"].items():
+            default_probability = float(pipeline.predict_proba(model_input)[0, 1])
+            threshold = float(assets["thresholds"][model_key])
             prediction_value = int(default_probability >= threshold)
             model_results.append(
                 {
-                    "name": model_name,
-                    "is_best_model": False,
+                    "name": display_names.get(model_key, model_key),
+                    "is_best_model": model_key == assets["selected_model"]["key"],
                     "value": prediction_value,
                     "label": "Default" if prediction_value == 1 else "No Default",
                     "default_probability": default_probability,
@@ -97,6 +114,7 @@ def predict():
                 }
             )
 
+        model_results.sort(key=lambda item: not item["is_best_model"])
         prediction_value = mode([item["value"] for item in model_results])
         prediction_label = "Default" if prediction_value == 1 else "No Default"
         default_probability = sum(item["default_probability"] for item in model_results) / len(model_results)
@@ -104,6 +122,9 @@ def predict():
             item["name"]: item for item in model_results
         }
         model_features = model_input.iloc[0]
+        total_bill = sum(raw_values[f"BILL_AMT{i}"] for i in range(1, 7))
+        total_pay = sum(raw_values[f"PAY_AMT{i}"] for i in range(1, 7))
+        outstanding = total_bill - total_pay
     except FileNotFoundError as error:
         return jsonify({"success": False, "error": str(error)}), 503
     except (KeyError, TypeError, ValueError, OSError) as error:
@@ -122,13 +143,13 @@ def predict():
         profile_id=profile.id,
         BILL_AMT1=payload.BILL_AMT1,
         PAY_AMT1=payload.PAY_AMT1,
-        Total_bill=float(model_features["Total_bill"]),
-        Total_pay=float(model_features["Total_pay"]),
-        Outstanding=float(model_features["Outstanding"]),
+        Total_bill=float(total_bill),
+        Total_pay=float(total_pay),
+        Outstanding=float(outstanding),
         prediction=prediction_value,
         prediction_label=prediction_label,
         default_probability=default_probability,
-        selected_model=assets["ensemble_method"],
+        selected_model=assets["selected_model"]["name"],
         model_predictions=stored_model_predictions,
     )
     db.session.add(record)
@@ -142,21 +163,18 @@ def predict():
                 "label": prediction_label,
                 "default_probability": default_probability,
             },
-            "best_model": assets["ensemble_method"],
-            "selection_metric": assets["ensemble_method"],
+            "best_model": assets["selected_model"]["name"],
+            "selection_metric": assets["selection_metric"],
             "final_verdict": prediction_label,
             "models": model_results,
             "features": {
-                key: float(model_features[key])
-                for key in [
-                    "LIMIT_BAL",
-                    "AGE",
-                    "PAY_0",
-                    "BILL_AMT1",
-                    "Total_bill",
-                    "Total_pay",
-                    "Outstanding",
-                ]
+                "LIMIT_BAL": float(model_features["LIMIT_BAL"]),
+                "AGE": float(model_features["AGE"]),
+                "PAY_0": float(model_features["PAY_0"]),
+                "BILL_AMT1": float(model_features["BILL_AMT1"]),
+                "Total_bill": float(total_bill),
+                "Total_pay": float(total_pay),
+                "Outstanding": float(outstanding),
             },
             "prediction_id": record.id,
             "customer_code": customer.customer_code,

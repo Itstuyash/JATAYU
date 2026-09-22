@@ -1,3 +1,22 @@
+function formatApiError(error, fallbackMessage) {
+  if (typeof error === "string" && error.trim()) return error;
+
+  if (Array.isArray(error)) {
+    const messages = error.map((item) => {
+      if (typeof item === "string") return item;
+      if (item && typeof item.msg === "string") {
+        const location = Array.isArray(item.loc) ? item.loc.at(-1) : "";
+        return location ? `${location}: ${item.msg}` : item.msg;
+      }
+      return null;
+    }).filter(Boolean);
+
+    if (messages.length) return messages.join(" ");
+  }
+
+  return fallbackMessage;
+}
+
 export async function requestPrediction(formValues) {
   const response = await fetch("/api/predict", {
     method: "POST",
@@ -7,7 +26,7 @@ export async function requestPrediction(formValues) {
 
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error || "Prediction request failed.");
+    throw new Error(formatApiError(data.error, "Prediction failed. Please check the entered values."));
   }
   return data;
 }

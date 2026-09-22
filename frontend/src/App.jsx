@@ -4,11 +4,18 @@ import Dashboard from "./components/Dashboard";
 
 export default function App() {
   const [result, setResult] = useState(null);
+  const [assessmentVersion, setAssessmentVersion] = useState(0);
   const [view, setView] = useState(window.location.hash === "#dashboard" ? "dashboard" : "assessment");
 
   function changeView(nextView) {
     setView(nextView);
     window.history.replaceState(null, "", `#${nextView}`);
+  }
+
+  function startNewAssessment() {
+    setResult(null);
+    setAssessmentVersion((version) => version + 1);
+    changeView("assessment");
   }
 
   return (
@@ -21,7 +28,7 @@ export default function App() {
       </aside>
       <div className="content" id="top">
         <header><span>Underwriting workspace</span><span className="status">● API-backed</span></header>
-        {view === "dashboard" ? <Dashboard /> : <AssessmentPage result={result} onPrediction={setResult} />}
+        {view === "dashboard" ? <Dashboard /> : <AssessmentPage result={result} onPrediction={setResult} onReset={startNewAssessment} formKey={assessmentVersion} />}
       </div>
     </div>
   );

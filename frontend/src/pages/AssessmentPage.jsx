@@ -1,7 +1,7 @@
 import PredictionForm from "../components/PredictionForm";
 import PredictionResult from "../components/PredictionResult";
 
-export default function AssessmentPage({ result, onPrediction }) {
+export default function AssessmentPage({ result, onPrediction, onReset, formKey }) {
   return (
     <main>
       <section className="hero">
@@ -10,8 +10,8 @@ export default function AssessmentPage({ result, onPrediction }) {
         <p>Enter the customer ID and current-month activity for a real-time default-risk prediction.</p>
       </section>
       {result && <div className="customer-banner">Customer ID: <strong>{result.customer_code}</strong> · Prediction #{result.prediction_id}</div>}
-      <PredictionResult result={result} />
-      <PredictionForm onPrediction={onPrediction} />
+      <PredictionResult result={result} onReset={onReset} />
+      <PredictionForm key={formKey} onPrediction={onPrediction} />
     </main>
   );
 }

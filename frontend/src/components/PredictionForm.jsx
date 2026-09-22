@@ -18,6 +18,12 @@ export default function PredictionForm({ onPrediction }) {
     setValues((current) => ({ ...current, [event.target.name]: event.target.value }));
   }
 
+  function resetForm() {
+    setCustomerId("");
+    setValues(initialValues);
+    setError("");
+  }
+
   async function submit(event) {
     event.preventDefault();
     if (!customerId.trim() || Object.values(values).some((value) => value === "")) {
@@ -47,7 +53,7 @@ export default function PredictionForm({ onPrediction }) {
       {error && <p className="form-error">{error}</p>}
       <div className="customer-entry">
         <label>
-          Customer ID
+          Customer ID <span className="required-mark" aria-hidden="true">*</span>
           <input
             name="customer_id"
             type="number"
@@ -66,7 +72,7 @@ export default function PredictionForm({ onPrediction }) {
           <div className="field-grid">
             {fields.filter((field) => field.group === group).map((field) => (
               <label key={field.key}>
-                {field.label}
+                {field.label} <span className="required-mark" aria-hidden="true">*</span>
                 <input
                   name={field.key}
                   type="number"
@@ -82,8 +88,8 @@ export default function PredictionForm({ onPrediction }) {
         </fieldset>
       ))}
       <div className="form-actions">
-        <button type="button" className="secondary" onClick={() => setValues(initialValues)}>
-          Clear inputs
+        <button type="button" className="secondary" onClick={resetForm}>
+          Reset
         </button>
         <button type="submit" disabled={loading}>
           {loading ? "Analyzing risk…" : "Predict default risk"}

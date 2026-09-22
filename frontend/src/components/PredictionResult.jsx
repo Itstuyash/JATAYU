@@ -10,12 +10,12 @@ function ModelCard({ model, primary }) {
   </article>;
 }
 
-export default function PredictionResult({ result }) {
+export default function PredictionResult({ result, onReset }) {
   if (!result) return null;
   const [primary, ...others] = result.models;
   const { Total_bill, Total_pay, Outstanding } = result.features;
   return <section className="result-area" aria-live="polite">
-    <div className="result-intro"><div><p className="eyebrow">Live model comparison · Prediction #{result.prediction_id}</p><h2>{result.final_verdict}</h2><p>The final verdict uses majority voting across all three trained models.</p></div><span className="selection-chip">{result.selection_metric.toUpperCase()}</span></div>
+    <div className="result-intro"><div><p className="eyebrow">Live model comparison · Prediction #{result.prediction_id}</p><h2>{result.final_verdict}</h2><p>The final verdict uses majority voting across all three trained models.</p></div><div className="result-actions"><span className="selection-chip">{result.selection_metric.toUpperCase()}</span><button type="button" className="secondary" onClick={onReset}>New assessment</button></div></div>
     <ModelCard model={primary} primary />
     <h3 className="comparison-title">Other trained models</h3>
     <div className="comparison-grid">{others.map((model) => <ModelCard key={model.name} model={model} />)}</div>
