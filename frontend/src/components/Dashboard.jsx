@@ -8,9 +8,11 @@ function formatDate(value) {
 function PredictionTable({ predictions }) {
   if (!predictions.length) return <p className="empty-state">No predictions have been stored yet.</p>;
   return <div className="table-wrap"><table>
-    <thead><tr><th>Customer</th><th>Result</th><th>Probability</th><th>Model</th><th>Time</th></tr></thead>
+    <thead><tr><th>Customer</th><th>Latest bill</th><th>Latest payment</th><th>Result</th><th>Probability</th><th>Model</th><th>Time</th></tr></thead>
     <tbody>{predictions.map((record) => <tr key={record.prediction_id}>
       <td>{record.customer_code}</td>
+      <td>{Number(record.BILL_AMT1).toLocaleString()}</td>
+      <td>{Number(record.PAY_AMT1).toLocaleString()}</td>
       <td><span className={`table-status ${record.prediction ? "risk" : "safe"}`}>{record.prediction_label}</span></td>
       <td>{(record.default_probability * 100).toFixed(1)}%</td>
       <td>{record.selected_model}</td>
@@ -55,7 +57,7 @@ export default function Dashboard() {
     </section>}
     <section className="dashboard-section"><div className="section-heading"><div><p className="eyebrow">Activity</p><h2>Recent five predictions</h2></div></div><PredictionTable predictions={dashboard?.recent_predictions || []} /></section>
     <section className="dashboard-section"><div className="section-heading"><div><p className="eyebrow">Customer lookup</p><h2>Prediction history</h2></div></div>
-      <form className="lookup-form" onSubmit={lookup}><input value={customerCode} onChange={(event) => setCustomerCode(event.target.value)} placeholder="CUST-000001" aria-label="Customer ID" /><button type="submit">Find customer</button></form>
+      <form className="lookup-form" onSubmit={lookup}><input value={customerCode} onChange={(event) => setCustomerCode(event.target.value)} placeholder="1" aria-label="Customer ID" /><button type="submit">Find customer</button></form>
       {history && <><p className="history-meta"><strong>{history.customer_code}</strong> · created {formatDate(history.created_at)}</p><PredictionTable predictions={history.predictions} /></>}
     </section>
   </main>;

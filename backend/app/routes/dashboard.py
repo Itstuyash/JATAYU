@@ -18,6 +18,8 @@ def serialize_prediction(record):
         "customer_code": record.customer.customer_code,
         "prediction": record.prediction,
         "prediction_label": record.prediction_label,
+        "BILL_AMT1": record.BILL_AMT1,
+        "PAY_AMT1": record.PAY_AMT1,
         "default_probability": record.default_probability,
         "selected_model": record.selected_model,
         "created_at": record.created_at.isoformat(),

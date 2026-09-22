@@ -1,8 +1,9 @@
-"""Helpers that prepare raw input through a saved model pipeline."""
+"""Inference helpers for pipeline-based model diagnostics."""
 
 
-def transform_for_classifier(pipeline, raw_frame):
-    """Use the saved pipeline steps to prepare one raw input for its classifier."""
-    engineered = pipeline.named_steps["feature_engineering"].transform(raw_frame)
-    scaler = pipeline.named_steps.get("scaler")
-    return engineered if scaler is None else scaler.transform(engineered)
+def transform_for_classifier(pipeline, X):
+    """Apply the pipeline’s preprocessing stage when present."""
+    feature_engineering = pipeline.named_steps.get("feature_engineering")
+    if feature_engineering is not None:
+        return feature_engineering.transform(X)
+    return X

@@ -1,4 +1,4 @@
-"""Independently load and test the saved credit-card default pipeline."""
+"""Independently load and test the saved ensemble artifact."""
 
 from pathlib import Path
 
@@ -6,7 +6,7 @@ import joblib
 import pandas as pd
 
 
-PIPELINE_PATH = Path(__file__).resolve().parent / "ml" / "credit_card_default_pipeline.pkl"
+PIPELINE_PATH = Path(__file__).resolve().parent / "ml" / "credit_default_model.pkl"
 
 SAMPLE_CUSTOMER = {
     "LIMIT_BAL": 200000,
@@ -29,7 +29,8 @@ SAMPLE_CUSTOMER = {
 
 def main():
     """Load the pickle and run one raw-input prediction."""
-    pipeline = joblib.load(PIPELINE_PATH)
+    artifact = joblib.load(PIPELINE_PATH)
+    pipeline = artifact["random_forest"] if isinstance(artifact, dict) else artifact
     customer = pd.DataFrame([SAMPLE_CUSTOMER])
     prediction = int(pipeline.predict(customer)[0])
     default_probability = float(pipeline.predict_proba(customer)[0, 1])

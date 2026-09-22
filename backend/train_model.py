@@ -21,6 +21,7 @@ from ml.inference import transform_for_classifier
 BASE_DIR = Path(__file__).resolve().parent
 DATASET_PATH = BASE_DIR / "data" / "UCI_Credit_Card.xls"
 PIPELINE_PATH = BASE_DIR / "ml" / "credit_card_default_pipeline.pkl"
+ENSEMBLE_MODEL_PATH = BASE_DIR / "ml" / "credit_default_model.pkl"
 MODEL_PATHS = {
     "Random Forest": PIPELINE_PATH,
     "Logistic Regression": BASE_DIR / "ml" / "logistic_regression_pipeline.pkl",
@@ -99,6 +100,23 @@ def build_model_pipelines():
     }
 
 
+def save_ensemble_artifact(pipelines):
+    """Persist the notebook's combined model artifact used by the API."""
+    artifact = {
+        "random_forest": pipelines["Random Forest"],
+        "xgboost": pipelines["XGBoost"],
+        "logistic_regression": pipelines["Logistic Regression"],
+        "thresholds": {
+            "random_forest": 0.5,
+            "xgboost": 0.5,
+            "logistic_regression": 0.5,
+        },
+        "ensemble_method": "majority_vote",
+    }
+    joblib.dump(artifact, ENSEMBLE_MODEL_PATH)
+    print(f"Saved ensemble artifact to: {ENSEMBLE_MODEL_PATH}")
+
+
 def main():
     """Train, evaluate, and save the complete pipeline."""
     data = load_dataset()
@@ -113,9 +131,10 @@ def main():
         stratify=y,
     )
 
+    pipelines = build_model_pipelines()
     metrics = {}
     shap_backgrounds = {}
-    for model_name, pipeline in build_model_pipelines().items():
+    for model_name, pipeline in pipelines.items():
         pipeline.fit(X_train, y_train)
         test_predictions = pipeline.predict(X_test)
         test_probabilities = pipeline.predict_proba(X_test)[:, 1]
@@ -133,6 +152,7 @@ def main():
             pipeline, X_train.sample(n=min(100, len(X_train)), random_state=42)
         )
 
+    save_ensemble_artifact(pipelines)
     best_model = max(metrics, key=lambda name: metrics[name]["roc_auc"])
     with METRICS_PATH.open("w", encoding="utf-8") as metrics_file:
         json.dump({"selection_metric": "roc_auc", "best_model": best_model, "models": metrics}, metrics_file, indent=2)

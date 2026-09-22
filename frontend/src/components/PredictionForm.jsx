@@ -2,26 +2,15 @@ import { useState } from "react";
 import { requestPrediction } from "../services/predictionService";
 
 const fields = [
-  { key: "LIMIT_BAL", label: "Credit limit", group: "Customer profile", min: 0 },
-  { key: "AGE", label: "Age", group: "Customer profile", min: 0 },
-  { key: "PAY_0", label: "Most recent repayment status (PAY_0)", group: "Customer profile" },
-  ...[1, 2, 3, 4, 5, 6].map((month) => ({
-    key: `BILL_AMT${month}`,
-    label: `Bill amount — month ${month}`,
-    group: "Six-month bill statements",
-  })),
-  ...[1, 2, 3, 4, 5, 6].map((month) => ({
-    key: `PAY_AMT${month}`,
-    label: `Payment amount — month ${month}`,
-    group: "Six-month payments",
-  })),
+  { key: "BILL_AMT1", label: "Current month bill amount", group: "Current month", min: 0 },
+  { key: "PAY_AMT1", label: "Current month payment amount", group: "Current month", min: 0 },
 ];
 
 const initialValues = Object.fromEntries(fields.map(({ key }) => [key, ""]));
 
 export default function PredictionForm({ onPrediction }) {
   const [values, setValues] = useState(initialValues);
-  const [customerCode, setCustomerCode] = useState("");
+  const [customerId, setCustomerId] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -31,8 +20,8 @@ export default function PredictionForm({ onPrediction }) {
 
   async function submit(event) {
     event.preventDefault();
-    if (Object.values(values).some((value) => value === "")) {
-      setError("Enter a value for every model input before requesting a prediction.");
+    if (!customerId.trim() || Object.values(values).some((value) => value === "")) {
+      setError("Enter a customer ID and both current-month values.");
       return;
     }
 
@@ -44,7 +33,7 @@ export default function PredictionForm({ onPrediction }) {
       );
       onPrediction(await requestPrediction({
         ...numericValues,
-        customer_code: customerCode.trim() || null,
+        customer_id: Number(customerId),
       }));
     } catch (requestError) {
       setError(requestError.message);
@@ -58,18 +47,20 @@ export default function PredictionForm({ onPrediction }) {
       {error && <p className="form-error">{error}</p>}
       <div className="customer-entry">
         <label>
-          Existing customer ID (optional)
+          Customer ID
           <input
-            name="customer_code"
-            type="text"
-            placeholder="CUST-000001"
-            value={customerCode}
-            onChange={(event) => setCustomerCode(event.target.value)}
+            name="customer_id"
+            type="number"
+            min="1"
+            placeholder="1"
+            value={customerId}
+            onChange={(event) => setCustomerId(event.target.value)}
+            required
           />
         </label>
-        <p>Leave blank to create a new customer on this assessment.</p>
+        <p>The ID is matched against the imported UCI customer table.</p>
       </div>
-      {["Customer profile", "Six-month bill statements", "Six-month payments"].map((group) => (
+      {["Current month"].map((group) => (
         <fieldset key={group}>
           <legend>{group}</legend>
           <div className="field-grid">
